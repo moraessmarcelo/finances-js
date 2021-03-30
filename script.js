@@ -10,15 +10,20 @@ const Modal = {
     }
 }
 
+const Storage = { 
+    get(){
+        return JSON.parse(localStorage.getItem("dev.finances:transactions")) || []
+    }, 
+
+    set(transactions){ 
+        localStorage.setItem("dev.finances:transactions" , JSON.stringify(transactions))
+    }
+}
+
 const Transcation = {
     //somar entradas
-    all: [{ description: 'Luz', amount: -50000, date: '23/01/2021' },
-    { description: 'Freela', amount: 500000, date: '23/01/2021' },
-    { description: 'Internet', amount: -20000, date: '23/01/2021' },
-    { description: 'App', amount: 200000, date: '23/01/2021' },
-
-    ],
-
+    all: Storage.get(), 
+    
     add(transaction) {
         Transcation.all.push(transaction)
         App.reload()
@@ -65,11 +70,13 @@ const DOM = {
 
     addTranscation(transaction, index) {
         const tr = document.createElement('tr')
-        tr.innerHTML = DOM.innerHTMLTranscation(transaction)
+        tr.innerHTML = DOM.innerHTMLTranscation(transaction, index)
+        tr.dataset.index = index
+
         DOM.TranscationsContainer.appendChild(tr)
     },
 
-    innerHTMLTranscation(transaction) {
+    innerHTMLTranscation(transaction, index) {
         const CSSclass = transaction.amount > 0 ? "income" : "expense"
 
         const amount = Utils.formatCurrency(transaction.amount)
@@ -79,7 +86,7 @@ const DOM = {
         <td class="${CSSclass}">${amount}</td>
         <td class="date">${transaction.date}</td>
         <td>
-        <img src="./assets/minus.svg" alt="Imagem Remover Transacao">
+        <img onclick="Transcation.remove(${index})" src="./assets/minus.svg" alt="Imagem Remover Transacao">
         </td>`
         return html
     },
@@ -96,6 +103,17 @@ const DOM = {
 }
 
 const Utils = {
+
+    formatAmount(value) {
+        value = Number(value.replace(/\,\./g, "")) * 100
+        return value
+    },
+
+    formatDate(date) {
+        const splitdDate = date.split("-")
+        return `${splitdDate[2]}/${splitdDate[1]}/${splitdDate[0]}`
+    },
+
     formatCurrency(value) {
         const signal = Number(value) < 0 ? "-" : ""
 
@@ -134,8 +152,28 @@ const Form = {
         }
     },
 
-    formatData() {
-        console.log('formatar dados')
+    formatValues() {
+        let { description, amount, date } = Form.getValues()
+        amount = Utils.formatAmount(amount)
+
+        date = Utils.formatDate(date)
+
+        return {
+            description, amount, date
+        }
+
+    },
+
+    saveTransaction(transaction) {
+        Transcation.add(transaction)
+
+    },
+
+    clearFields() {
+        Form.description.value = ""
+        Form.amount.value = ""
+        Form.date.value = ""
+
     },
 
     submit(event) {
@@ -143,10 +181,16 @@ const Form = {
         event.preventDefault()
 
         try {
-        
+
             Form.validateField()
 
-            Form.formatData()
+            const transaction = Form.formatValues()
+
+            Transcation.add(transaction)
+
+            Form.clearFields()
+
+            Modal.close()
 
         } catch (error) {
             alert(error.message)
@@ -157,11 +201,9 @@ const Form = {
 
 const App = {
     init() {
-        Transcation.all.forEach(transaction => {
-            DOM.addTranscation(transaction)
-        })
-
+        Transcation.all.forEach(DOM.addTranscation) 
         DOM.updateBalance()
+        Storage.set(Transcation.all)
     },
 
     reload() {

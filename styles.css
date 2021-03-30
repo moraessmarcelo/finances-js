@@ -252,7 +252,7 @@ input {
     margin-top: 0.8rem;
 }
 
-.imput-group small { 
+.imput-group .help { 
     opacity: 0.4;
 }
 
